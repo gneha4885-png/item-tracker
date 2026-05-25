@@ -1,18 +1,52 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
+from database import save_item, get_all_items
+from claude_service import extract_item_location
 
 app = FastAPI()
 
-# GET endpoint - just reads and returns data
+# Request model
+class LogItemRequest(BaseModel):
+    text: str
+    user_id: str = "neha123"  # hardcoded for now, auth comes Day 10
+
+# Response model
+class LogItemResponse(BaseModel):
+    message: str
+    item_name: str
+    location: str
+    room: str
+
 @app.get("/health")
 def health_check():
     return {"status": "ok", "message": "Item Tracker API is running!"}
 
-# This defines what data we expect in POST request
-class HelloRequest(BaseModel):
-    name: str
+@app.post("/log-item", response_model=LogItemResponse)
+def log_item(request: LogItemRequest):
+    try:
+        # Step 1: Send text to Claude for extraction
+        extracted = extract_item_location(request.text)
+        
+        # Step 2: Save to Firestore
+        save_item(
+            user_id=request.user_id,
+            item_name=extracted["item_name"],
+            location=extracted["location"],
+            room=extracted["room"],
+            raw_text=request.text
+        )
+        
+        # Step 3: Return success response
+        return LogItemResponse(
+            message=f"Got it! I saved your {extracted['item_name']}",
+            item_name=extracted["item_name"],
+            location=extracted["location"],
+            room=extracted["room"]
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
-# POST endpoint - accepts data and returns a response
-@app.post("/hello")
-def say_hello(request: HelloRequest):
-    return {"message": f"Hello {request.name}! Welcome to Item Tracker!"}
+@app.get("/my-items")
+def my_items(user_id: str = "neha123"):
+    items = get_all_items(user_id)
+    return {"items": items, "total": len(items)}
