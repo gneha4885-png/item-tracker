@@ -1,7 +1,9 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Header
 from pydantic import BaseModel, validator
 from database import save_item, get_all_items, find_item
 from claude_service import extract_item_location, find_item_location
+from auth import register_user, login_user, verify_token
+from typing import Optional
 
 app = FastAPI(
     title="Item Tracker API",
@@ -112,3 +114,34 @@ def my_items(user_id: str = "neha123"):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Something went wrong: {str(e)}")
+    
+# Auth models
+class AuthRequest(BaseModel):
+    email: str
+    password: str
+
+@app.post("/register")
+def register(request: AuthRequest):
+    try:
+        result = register_user(request.email, request.password)
+        return {
+            "message": "Account created successfully!",
+            "user_id": result["user_id"],
+            "email": result["email"],
+            "token": result["token"]
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.post("/login")
+def login(request: AuthRequest):
+    try:
+        result = login_user(request.email, request.password)
+        return {
+            "message": "Login successful!",
+            "user_id": result["user_id"],
+            "email": result["email"],
+            "token": result["token"]
+        }
+    except Exception as e:
+        raise HTTPException(status_code=401, detail=str(e))
