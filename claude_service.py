@@ -9,7 +9,7 @@ client = anthropic.Anthropic()
 
 def extract_item_location(text: str) -> dict:
     """Send text to Claude and extract item + location as JSON"""
-    
+
     message = client.messages.create(
         model="claude-sonnet-4-5",
         max_tokens=1024,
@@ -28,6 +28,12 @@ Always respond with ONLY a JSON object like this:
 }
 
 If room is not mentioned, use "unknown".
+If the sentence is too vague or doesn't mention an item or location, return:
+{
+  "item_name": "unknown",
+  "location": "unknown",
+  "room": "unknown"
+}
 Never add any extra text — only the JSON.""",
         messages=[
             {
@@ -36,30 +42,38 @@ Never add any extra text — only the JSON.""",
             }
         ]
     )
-    
+
     # Get Claude's response
     response_text = message.content[0].text.strip()
-    
+
     # Remove markdown code blocks if Claude added them
     response_text = re.sub(r'```json\s*', '', response_text)
     response_text = re.sub(r'```\s*', '', response_text)
     response_text = response_text.strip()
-    
-    # Parse as JSON
-    return json.loads(response_text)
+
+    try:
+        result = json.loads(response_text)
+        return result
+    except json.JSONDecodeError:
+        # If Claude still returns bad JSON, return a safe default
+        return {
+            "item_name": "unknown",
+            "location": "unknown",
+            "room": "unknown"
+        }
 
 def find_item_location(query: str, items: list) -> str:
     """Search through saved items and answer user's query"""
-    
+
     # If no items saved yet
     if not items:
         return "You haven't saved any item locations yet. Try saying 'I kept my keys in the kitchen'!"
-    
+
     # Format items as readable text for Claude
     items_text = ""
     for i, item in enumerate(items, 1):
         items_text += f"{i}. {item['item_name']} — {item['location']} ({item['room']}) — saved on {item['timestamp'][:10]}\n"
-    
+
     message = client.messages.create(
         model="claude-sonnet-4-5",
         max_tokens=1024,
@@ -75,6 +89,8 @@ Example answer: "You kept your car keys on the kitchen counter. You saved this 2
 
 If no match is found, say: "I couldn't find that item in your saved locations. Try logging it first!"
 
+If the query is too vague like 'where is everything', list all items briefly.
+
 Always be friendly and conversational.""",
         messages=[
             {
@@ -83,5 +99,5 @@ Always be friendly and conversational.""",
             }
         ]
     )
-    
+
     return message.content[0].text

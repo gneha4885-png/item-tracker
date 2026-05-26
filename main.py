@@ -1,15 +1,28 @@
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, validator
 from database import save_item, get_all_items, find_item
 from claude_service import extract_item_location, find_item_location
 
+app = FastAPI(
+    title="Item Tracker API",
+    description="AI powered item location tracker",
+    version="1.0.0"
+)
 
-app = FastAPI()
-
-# Request model
+# Request model with validation
 class LogItemRequest(BaseModel):
     text: str
-    user_id: str = "neha123"  # hardcoded for now, auth comes Day 10
+    user_id: str = "neha123"
+
+    @validator('text')
+    def text_must_not_be_empty(cls, v):
+        if not v or not v.strip():
+            raise ValueError('Text cannot be empty')
+        if len(v.strip()) < 5:
+            raise ValueError('Text too short — please describe where you kept the item')
+        if len(v) > 500:
+            raise ValueError('Text too long — please keep it under 500 characters')
+        return v.strip()
 
 # Response model
 class LogItemResponse(BaseModel):
@@ -20,15 +33,26 @@ class LogItemResponse(BaseModel):
 
 @app.get("/health")
 def health_check():
-    return {"status": "ok", "message": "Item Tracker API is running!"}
+    return {
+        "status": "ok",
+        "message": "Item Tracker API is running!",
+        "version": "1.0.0"
+    }
 
 @app.post("/log-item", response_model=LogItemResponse)
 def log_item(request: LogItemRequest):
     try:
         # Step 1: Send text to Claude for extraction
         extracted = extract_item_location(request.text)
-        
-        # Step 2: Save to Firestore
+
+        # Step 2: Check if extraction was meaningful
+        if extracted["item_name"] == "unknown" and extracted["location"] == "unknown":
+            raise HTTPException(
+                status_code=400,
+                detail="I couldn't understand what item or location you mentioned. Try something like 'I kept my keys in the kitchen drawer'"
+            )
+
+        # Step 3: Save to Firestore
         save_item(
             user_id=request.user_id,
             item_name=extracted["item_name"],
@@ -36,36 +60,55 @@ def log_item(request: LogItemRequest):
             room=extracted["room"],
             raw_text=request.text
         )
-        
-        # Step 3: Return success response
+
+        # Step 4: Return success response
         return LogItemResponse(
-            message=f"Got it! I saved your {extracted['item_name']}",
+            message=f"Got it! I saved your {extracted['item_name']} 📍",
             item_name=extracted["item_name"],
             location=extracted["location"],
             room=extracted["room"]
         )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/my-items")
-def my_items(user_id: str = "neha123"):
-    items = get_all_items(user_id)
-    return {"items": items, "total": len(items)}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Something went wrong: {str(e)}")
 
 @app.get("/find-item")
 def find_item_endpoint(query: str, user_id: str = "neha123"):
+    # Validate query
+    if not query or not query.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="Please ask a question like 'where are my keys?'"
+        )
+
     try:
         # Step 1: Get all items for this user
         items = find_item(user_id, query)
-        
+
         # Step 2: Ask Claude to find the best match
         answer = find_item_location(query, items)
-        
+
         # Step 3: Return the answer
         return {
             "query": query,
             "answer": answer,
             "total_items_searched": len(items)
         }
+
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=f"Something went wrong: {str(e)}")
+
+@app.get("/my-items")
+def my_items(user_id: str = "neha123"):
+    try:
+        items = get_all_items(user_id)
+        return {
+            "items": items,
+            "total": len(items)
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Something went wrong: {str(e)}")
