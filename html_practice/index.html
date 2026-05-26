@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Item Tracker</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0a0a0f;
+      --card: #13131a;
+      --card2: #1a1a25;
+      --accent: #6c63ff;
+      --accent2: #ff6584;
+      --accent3: #43e97b;
+      --text: #f0f0ff;
+      --text2: #8888aa;
+      --border: rgba(108,99,255,0.15);
+      --glow: rgba(108,99,255,0.3);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 20px 16px 40px;
+      color: var(--text);
+    }
+    body::before {
+      content: '';
+      position: fixed;
+      top: -100px; left: -100px;
+      width: 400px; height: 400px;
+      background: radial-gradient(circle, rgba(108,99,255,0.12) 0%, transparent 70%);
+      pointer-events: none; z-index: 0;
+    }
+    body::after {
+      content: '';
+      position: fixed;
+      bottom: -100px; right: -100px;
+      width: 350px; height: 350px;
+      background: radial-gradient(circle, rgba(255,101,132,0.08) 0%, transparent 70%);
+      pointer-events: none; z-index: 0;
+    }
+    .app { width: 100%; max-width: 390px; position: relative; z-index: 1; }
+
+    /* Header */
+    .header { padding: 16px 0 24px; animation: fadeDown 0.6s ease both; }
+    .header-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+    .logo { display: flex; align-items: center; gap: 10px; }
+    .logo-icon {
+      width: 38px; height: 38px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 12px; display: flex; align-items: center;
+      justify-content: center; font-size: 18px;
+      box-shadow: 0 4px 15px var(--glow);
+    }
+    .logo-text { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 18px; color: var(--text); letter-spacing: -0.5px; }
+    .avatar {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, #43e97b, #38f9d7);
+      border-radius: 50%; display: flex; align-items: center;
+      justify-content: center; font-size: 14px; font-weight: 600; color: #0a0a0f; cursor: pointer;
+    }
+    .greeting { font-family: 'Syne', sans-serif; font-size: 26px; font-weight: 800; line-height: 1.2; letter-spacing: -0.5px; }
+    .greeting span { background: linear-gradient(90deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .sub { color: var(--text2); font-size: 14px; margin-top: 6px; font-weight: 300; }
+
+    /* Stats */
+    .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; animation: fadeUp 0.6s 0.1s ease both; }
+    .stat-card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 14px 16px; position: relative; overflow: hidden; }
+    .stat-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, var(--accent), transparent); }
+    .stat-num { font-family: 'Syne', sans-serif; font-size: 28px; font-weight: 800; color: var(--text); line-height: 1; }
+    .stat-label { font-size: 11px; color: var(--text2); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+    /* Tabs */
+    .tabs { display: flex; background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 4px; margin-bottom: 20px; animation: fadeUp 0.6s 0.15s ease both; }
+    .tab { flex: 1; padding: 10px; text-align: center; font-size: 13px; font-weight: 500; color: var(--text2); cursor: pointer; border-radius: 10px; transition: all 0.2s ease; }
+    .tab.active { background: linear-gradient(135deg, var(--accent), #8b83ff); color: white; font-weight: 600; box-shadow: 0 4px 12px var(--glow); }
+
+    /* Panels */
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    /* Card */
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 20px; margin-bottom: 14px; animation: fadeUp 0.5s ease both; }
+    .card-label { font-size: 11px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
+
+    /* Input */
+    .input-wrap { position: relative; }
+    textarea {
+      width: 100%; background: var(--card2); border: 1px solid var(--border);
+      border-radius: 14px; padding: 14px 16px; color: var(--text);
+      font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 400;
+      resize: none; height: 100px; transition: border-color 0.2s; outline: none; line-height: 1.5;
+    }
+    textarea::placeholder { color: var(--text2); }
+    textarea:focus { border-color: var(--accent); }
+    .mic-btn {
+      position: absolute; bottom: 12px; right: 12px;
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border: none; border-radius: 10px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; font-size: 16px;
+      transition: transform 0.2s, box-shadow 0.2s; box-shadow: 0 4px 12px var(--glow);
+    }
+    .mic-btn:hover { transform: scale(1.1); }
+    .mic-btn.recording { animation: pulse 1s infinite; }
+    .save-btn {
+      width: 100%; padding: 16px;
+      background: linear-gradient(135deg, var(--accent), #8b83ff);
+      border: none; border-radius: 14px; color: white;
+      font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700;
+      cursor: pointer; letter-spacing: 0.3px;
+      transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
+      box-shadow: 0 8px 24px var(--glow); margin-top: 12px;
+    }
+    .save-btn:hover { transform: translateY(-2px); box-shadow: 0 12px 32px var(--glow); }
+    .save-btn:active { transform: translateY(0); }
+    .save-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    /* Suggestion chips */
+    .suggestion {
+      font-size: 13px; color: var(--text2); padding: 10px 12px;
+      background: var(--card2); border-radius: 10px; cursor: pointer;
+      transition: color 0.2s, background 0.2s; line-height: 1.4; margin-bottom: 8px;
+    }
+    .suggestion:last-child { margin-bottom: 0; }
+    .suggestion:hover { color: var(--text); background: rgba(108,99,255,0.1); }
+
+    /* Toast */
+    .toast {
+      position: fixed; bottom: 30px; left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: linear-gradient(135deg, #43e97b, #38f9d7);
+      color: #0a0a0f; padding: 14px 24px; border-radius: 50px;
+      font-size: 14px; font-weight: 600;
+      transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+      z-index: 999; white-space: nowrap;
+      box-shadow: 0 8px 30px rgba(67,233,123,0.4);
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+
+    /* Find */
+    .search-wrap { position: relative; margin-bottom: 14px; }
+    .search-input {
+      width: 100%; background: var(--card); border: 1px solid var(--border);
+      border-radius: 14px; padding: 16px 52px 16px 18px; color: var(--text);
+      font-family: 'DM Sans', sans-serif; font-size: 15px; outline: none; transition: border-color 0.2s;
+    }
+    .search-input::placeholder { color: var(--text2); }
+    .search-input:focus { border-color: var(--accent); }
+    .search-btn {
+      position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+      width: 38px; height: 38px;
+      background: linear-gradient(135deg, var(--accent), #8b83ff);
+      border: none; border-radius: 10px; cursor: pointer; font-size: 16px;
+      display: flex; align-items: center; justify-content: center;
+      transition: transform 0.2s; box-shadow: 0 4px 12px var(--glow);
+    }
+    .search-btn:hover { transform: translateY(-50%) scale(1.1); }
+    .answer-card {
+      background: var(--card); border: 1px solid rgba(67,233,123,0.2);
+      border-radius: 20px; padding: 20px; display: none; animation: fadeUp 0.4s ease both;
+    }
+    .answer-card.show { display: block; }
+    .answer-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+    .answer-icon { width: 32px; height: 32px; background: linear-gradient(135deg, #43e97b, #38f9d7); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 14px; }
+    .answer-label { font-size: 11px; font-weight: 600; color: #43e97b; text-transform: uppercase; letter-spacing: 1px; }
+    .answer-text { font-size: 15px; line-height: 1.6; color: var(--text); }
+
+    /* History */
+    .items-list { display: flex; flex-direction: column; gap: 10px; }
+    .item-card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+      padding: 14px 16px; display: flex; align-items: center; gap: 14px;
+      animation: fadeUp 0.4s ease both; cursor: pointer; transition: border-color 0.2s, transform 0.2s;
+    }
+    .item-card:hover { border-color: var(--accent); transform: translateX(4px); }
+    .item-emoji { width: 42px; height: 42px; background: var(--card2); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+    .item-info { flex: 1; min-width: 0; }
+    .item-name { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .item-location { font-size: 12px; color: var(--text2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .item-room { font-size: 11px; padding: 4px 10px; background: rgba(108,99,255,0.15); color: var(--accent); border-radius: 20px; font-weight: 500; flex-shrink: 0; }
+
+    /* Empty state */
+    .empty-state { text-align: center; padding: 40px 20px; color: var(--text2); }
+    .empty-state .big { font-size: 40px; margin-bottom: 12px; }
+    .empty-state p { font-size: 14px; line-height: 1.6; }
+
+    /* Spinner */
+    .spinner { width: 20px; height: 20px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 0.7s linear infinite; display: inline-block; vertical-align: middle; }
+
+    @keyframes fadeDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(255,101,132,0.4); } 50% { box-shadow: 0 0 0 8px rgba(255,101,132,0); } }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-top">
+      <div class="logo">
+        <div class="logo-icon">📍</div>
+        <span class="logo-text">ItemTracker</span>
+      </div>
+      <div class="avatar">N</div>
+    </div>
+    <div class="greeting">Never forget<br><span>where you kept</span> things.</div>
+    <div class="sub">Your AI-powered personal memory assistant</div>
+  </div>
+
+  <!-- Stats — real numbers from saved items -->
+  <div class="stats">
+    <div class="stat-card">
+      <div class="stat-num" id="totalItems">0</div>
+      <div class="stat-label">Items saved</div>
+    </div>
+    <div class="stat-card" style="border-color:rgba(255,101,132,0.15);">
+      <div class="stat-num" id="totalRooms" style="background:linear-gradient(90deg,#ff6584,#ffb347);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">0</div>
+      <div class="stat-label">Rooms tracked</div>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('log')">📝 Log Item</div>
+    <div class="tab" onclick="switchTab('find')">🔍 Find Item</div>
+    <div class="tab" onclick="switchTab('history')">📋 History</div>
+  </div>
+
+  <!-- LOG PANEL -->
+  <div class="panel active" id="panel-log">
+    <div class="card">
+      <div class="card-label">Where did you keep it?</div>
+      <div class="input-wrap">
+        <textarea id="logText" placeholder="e.g. I kept my passport in the blue drawer in the bedroom..."></textarea>
+        <button class="mic-btn" id="micBtn" onclick="toggleMic()" title="Voice input">🎤</button>
+      </div>
+      <button class="save-btn" id="saveBtn" onclick="saveItem()">Save Location</button>
+    </div>
+    <div class="card" style="padding:16px;">
+      <div class="card-label">Quick examples — tap to use</div>
+      <div class="suggestion" onclick="fillSuggestion(this)">💳 I kept my Aadhaar card in the top drawer of my desk</div>
+      <div class="suggestion" onclick="fillSuggestion(this)">🔑 Car keys are on the hook near the main door</div>
+      <div class="suggestion" onclick="fillSuggestion(this)">💊 Medicines are in the kitchen cabinet top shelf</div>
+    </div>
+  </div>
+
+  <!-- FIND PANEL -->
+  <div class="panel" id="panel-find">
+    <div class="search-wrap">
+      <input class="search-input" id="findInput" placeholder="Where are my keys? Where is my passport?" />
+      <button class="search-btn" id="searchBtn" onclick="findItem()">🔍</button>
+    </div>
+    <div class="answer-card" id="answerCard">
+      <div class="answer-header">
+        <div class="answer-icon">🤖</div>
+        <div class="answer-label">AI found it</div>
+      </div>
+      <div class="answer-text" id="answerText"></div>
+    </div>
+    <div class="empty-state" id="findEmpty">
+      <div class="big">🔍</div>
+      <p>Ask me anything like<br><strong>"where are my car keys?"</strong><br>and I'll find it for you!</p>
+    </div>
+  </div>
+
+  <!-- HISTORY PANEL -->
+  <div class="panel" id="panel-history">
+    <div class="items-list" id="itemsList">
+      <div class="empty-state">
+        <div class="big">📭</div>
+        <p>No items saved yet.<br>Go to <strong>Log Item</strong> to start!</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+  // ─── In-memory storage (will be replaced with real API in React) ───
+  let items = [];
+
+  const EMOJI_MAP = {
+    key: '🗝️', keys: '🗝️', passport: '📘', glasses: '👓', phone: '📱',
+    medicine: '💊', medicines: '💊', wallet: '👛', laptop: '💻',
+    charger: '🔌', book: '📚', watch: '⌚', card: '💳', default: '📦'
+  };
+
+  function getEmoji(name) {
+    const lower = name.toLowerCase();
+    for (const [key, emoji] of Object.entries(EMOJI_MAP)) {
+      if (lower.includes(key)) return emoji;
+    }
+    return EMOJI_MAP.default;
+  }
+
+  function timeAgo(date) {
+    const diff = Math.floor((Date.now() - date) / 1000);
+    if (diff < 60) return 'just now';
+    if (diff < 3600) return Math.floor(diff/60) + ' min ago';
+    if (diff < 86400) return Math.floor(diff/3600) + ' hr ago';
+    return Math.floor(diff/86400) + ' days ago';
+  }
+
+  function updateStats() {
+    document.getElementById('totalItems').textContent = items.length;
+    const rooms = new Set(items.map(i => i.room).filter(r => r && r !== 'unknown'));
+    document.getElementById('totalRooms').textContent = rooms.size;
+  }
+
+  function renderHistory() {
+    const list = document.getElementById('itemsList');
+    if (items.length === 0) {
+      list.innerHTML = `<div class="empty-state"><div class="big">📭</div><p>No items saved yet.<br>Go to <strong>Log Item</strong> to start!</p></div>`;
+      return;
+    }
+    list.innerHTML = [...items].reverse().map(item => `
+      <div class="item-card">
+        <div class="item-emoji">${getEmoji(item.item_name)}</div>
+        <div class="item-info">
+          <div class="item-name">${capitalize(item.item_name)}</div>
+          <div class="item-location">${item.location} • ${timeAgo(item.savedAt)}</div>
+        </div>
+        <div class="item-room">${capitalize(item.room)}</div>
+      </div>
+    `).join('');
+  }
+
+  function capitalize(str) {
+    if (!str) return '';
+    return str.charAt(0).toUpperCase() + str.slice(1);
+  }
+
+  // ─── Tab switching ───
+  function switchTab(tab) {
+    document.querySelectorAll('.tab').forEach((t, i) => {
+      t.classList.toggle('active', ['log','find','history'][i] === tab);
+    });
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.getElementById('panel-' + tab).classList.add('active');
+    if (tab === 'history') renderHistory();
+  }
+
+  // ─── Toast ───
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 3000);
+  }
+
+  // ─── Fill suggestion ───
+  function fillSuggestion(el) {
+    document.getElementById('logText').value = el.textContent.slice(2).trim();
+    document.getElementById('logText').focus();
+  }
+
+  // ─── Save item ───
+  // Right now uses a simple Claude-like extraction locally
+  // On Day 15 this will be: fetch('http://localhost:8000/log-item', ...)
+  function saveItem() {
+    const text = document.getElementById('logText').value.trim();
+    if (!text || text.length < 5) {
+      showToast('⚠️ Please describe where you kept the item!');
+      return;
+    }
+    const btn = document.getElementById('saveBtn');
+    btn.innerHTML = '<span class="spinner"></span> Saving...';
+    btn.disabled = true;
+
+    // Simulate API call delay
+    setTimeout(() => {
+      // Simple local extraction (will be replaced by Claude API)
+      const extracted = localExtract(text);
+      items.push({ ...extracted, raw_text: text, savedAt: Date.now() });
+      updateStats();
+      btn.innerHTML = 'Save Location';
+      btn.disabled = false;
+      document.getElementById('logText').value = '';
+      showToast(`✅ Saved! ${capitalize(extracted.item_name)} → ${extracted.location}`);
+    }, 800);
+  }
+
+  // ─── Simple local extraction (placeholder for Claude API) ───
+  function localExtract(text) {
+    const lower = text.toLowerCase();
+    const rooms = ['bedroom', 'kitchen', 'bathroom', 'living room', 'office', 'hall', 'garage', 'balcony'];
+    const room = rooms.find(r => lower.includes(r)) || 'unknown';
+    // Extract item name — simple heuristic
+    const itemMatch = lower.match(/(?:my|the)\s+([a-z\s]+?)(?:\s+(?:in|on|at|near|behind|under|inside))/);
+    const item_name = itemMatch ? itemMatch[1].trim() : 'item';
+    // Extract location
+    const locMatch = lower.match(/(?:in|on|at|near|behind|under|inside)\s+(?:the\s+)?(.+?)(?:\s+in\s+|\s+near\s+|$)/);
+    const location = locMatch ? locMatch[1].trim() : 'unknown location';
+    return { item_name, location, room };
+  }
+
+  // ─── Find item ───
+  // On Day 17 this will be: fetch('http://localhost:8000/find-item?query=...')
+  function findItem() {
+    const query = document.getElementById('findInput').value.trim();
+    if (!query) return;
+    const btn = document.getElementById('searchBtn');
+    btn.innerHTML = '<span class="spinner"></span>';
+
+    setTimeout(() => {
+      btn.innerHTML = '🔍';
+      document.getElementById('findEmpty').style.display = 'none';
+      const card = document.getElementById('answerCard');
+      card.classList.add('show');
+
+      if (items.length === 0) {
+        document.getElementById('answerText').textContent = "You haven't saved any items yet. Go to Log Item tab to start!";
+        return;
+      }
+
+      // Simple local search
+      const lower = query.toLowerCase();
+      const found = items.find(item =>
+        lower.includes(item.item_name.toLowerCase()) ||
+        item.item_name.toLowerCase().split(' ').some(w => lower.includes(w))
+      );
+
+      if (found) {
+        document.getElementById('answerText').textContent =
+          `You kept your ${found.item_name} at ${found.location} (${found.room}). Saved ${timeAgo(found.savedAt)}.`;
+      } else {
+        document.getElementById('answerText').textContent =
+          "I couldn't find that item in your saved locations. Try logging it first!";
+      }
+    }, 800);
+  }
+
+  // ─── Voice input ───
+  let recognition;
+  function toggleMic() {
+    if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
+      showToast('⚠️ Voice not supported — try Chrome browser');
+      return;
+    }
+    const btn = document.getElementById('micBtn');
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!recognition) {
+      recognition = new SpeechRecognition();
+      recognition.continuous = false;
+      recognition.lang = 'en-IN';
+      recognition.onresult = (e) => {
+        document.getElementById('logText').value = e.results[0][0].transcript;
+        btn.classList.remove('recording');
+        btn.textContent = '🎤';
+        showToast('🎤 Voice captured!');
+      };
+      recognition.onerror = () => {
+        btn.classList.remove('recording');
+        btn.textContent = '🎤';
+      };
+      recognition.onend = () => {
+        btn.classList.remove('recording');
+        btn.textContent = '🎤';
+      };
+    }
+    btn.classList.add('recording');
+    btn.textContent = '⏺️';
+    recognition.start();
+  }
+
+  // Enter key on search
+  document.getElementById('findInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') findItem();
+  });
+
+  // Init stats
+  updateStats();
+</script>
+</body>
+</html>
