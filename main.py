@@ -1,7 +1,8 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from database import save_item, get_all_items
-from claude_service import extract_item_location
+from database import save_item, get_all_items, find_item
+from claude_service import extract_item_location, find_item_location
+
 
 app = FastAPI()
 
@@ -50,3 +51,21 @@ def log_item(request: LogItemRequest):
 def my_items(user_id: str = "neha123"):
     items = get_all_items(user_id)
     return {"items": items, "total": len(items)}
+
+@app.get("/find-item")
+def find_item_endpoint(query: str, user_id: str = "neha123"):
+    try:
+        # Step 1: Get all items for this user
+        items = find_item(user_id, query)
+        
+        # Step 2: Ask Claude to find the best match
+        answer = find_item_location(query, items)
+        
+        # Step 3: Return the answer
+        return {
+            "query": query,
+            "answer": answer,
+            "total_items_searched": len(items)
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

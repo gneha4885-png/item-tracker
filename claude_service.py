@@ -47,3 +47,41 @@ Never add any extra text — only the JSON.""",
     
     # Parse as JSON
     return json.loads(response_text)
+
+def find_item_location(query: str, items: list) -> str:
+    """Search through saved items and answer user's query"""
+    
+    # If no items saved yet
+    if not items:
+        return "You haven't saved any item locations yet. Try saying 'I kept my keys in the kitchen'!"
+    
+    # Format items as readable text for Claude
+    items_text = ""
+    for i, item in enumerate(items, 1):
+        items_text += f"{i}. {item['item_name']} — {item['location']} ({item['room']}) — saved on {item['timestamp'][:10]}\n"
+    
+    message = client.messages.create(
+        model="claude-sonnet-4-5",
+        max_tokens=1024,
+        system="""You are a helpful assistant that helps people find where they kept their belongings.
+
+You will be given:
+1. A list of saved item locations
+2. A question from the user
+
+Your job is to find the best matching item and answer in a friendly, natural way.
+
+Example answer: "You kept your car keys on the kitchen counter. You saved this 2 days ago."
+
+If no match is found, say: "I couldn't find that item in your saved locations. Try logging it first!"
+
+Always be friendly and conversational.""",
+        messages=[
+            {
+                "role": "user",
+                "content": f"My saved items:\n{items_text}\n\nMy question: {query}"
+            }
+        ]
+    )
+    
+    return message.content[0].text

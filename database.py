@@ -27,3 +27,11 @@ def get_all_items(user_id: str):
               .where("user_id", "==", user_id)\
               .get()
     return [item.to_dict() for item in items]
+
+
+def find_item(user_id: str, query: str):
+    """Get all items for a user to search through"""
+    items = db.collection("items")\
+              .where("user_id", "==", user_id)\
+              .get()
+    return [item.to_dict() for item in items]
