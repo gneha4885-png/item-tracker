@@ -1,3 +1,4 @@
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI, HTTPException, Header
 from pydantic import BaseModel, validator
 from database import save_item, get_all_items, find_item
@@ -9,6 +10,12 @@ app = FastAPI(
     title="Item Tracker API",
     description="AI powered item location tracker",
     version="1.0.0"
+)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # Request model with validation

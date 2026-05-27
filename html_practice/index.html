@@ -286,15 +286,13 @@
 
 <!-- Toast -->
 <div class="toast" id="toast"></div>
-
 <script>
-  // ─── In-memory storage (will be replaced with real API in React) ───
   let items = [];
 
   const EMOJI_MAP = {
-    key: '🗝️', keys: '🗝️', passport: '📘', glasses: '👓', phone: '📱',
-    medicine: '💊', medicines: '💊', wallet: '👛', laptop: '💻',
-    charger: '🔌', book: '📚', watch: '⌚', card: '💳', default: '📦'
+    key:'🗝️', keys:'🗝️', passport:'📘', glasses:'👓', phone:'📱',
+    medicine:'💊', medicines:'💊', wallet:'👛', laptop:'💻',
+    charger:'🔌', book:'📚', watch:'⌚', card:'💳', default:'📦'
   };
 
   function getEmoji(name) {
@@ -313,6 +311,11 @@
     return Math.floor(diff/86400) + ' days ago';
   }
 
+  function capitalize(str) {
+    if (!str) return '';
+    return str.charAt(0).toUpperCase() + str.slice(1);
+  }
+
   function updateStats() {
     document.getElementById('totalItems').textContent = items.length;
     const rooms = new Set(items.map(i => i.room).filter(r => r && r !== 'unknown'));
@@ -322,7 +325,7 @@
   function renderHistory() {
     const list = document.getElementById('itemsList');
     if (items.length === 0) {
-      list.innerHTML = `<div class="empty-state"><div class="big">📭</div><p>No items saved yet.<br>Go to <strong>Log Item</strong> to start!</p></div>`;
+      list.innerHTML = '<div class="empty-state"><div class="big">📭</div><p>No items saved yet.<br>Go to <strong>Log Item</strong> to start!</p></div>';
       return;
     }
     list.innerHTML = [...items].reverse().map(item => `
@@ -337,12 +340,6 @@
     `).join('');
   }
 
-  function capitalize(str) {
-    if (!str) return '';
-    return str.charAt(0).toUpperCase() + str.slice(1);
-  }
-
-  // ─── Tab switching ───
   function switchTab(tab) {
     document.querySelectorAll('.tab').forEach((t, i) => {
       t.classList.toggle('active', ['log','find','history'][i] === tab);
@@ -352,7 +349,6 @@
     if (tab === 'history') renderHistory();
   }
 
-  // ─── Toast ───
   function showToast(msg) {
     const t = document.getElementById('toast');
     t.textContent = msg;
@@ -360,93 +356,75 @@
     setTimeout(() => t.classList.remove('show'), 3000);
   }
 
-  // ─── Fill suggestion ───
   function fillSuggestion(el) {
     document.getElementById('logText').value = el.textContent.slice(2).trim();
     document.getElementById('logText').focus();
   }
 
-  // ─── Save item ───
-  // Right now uses a simple Claude-like extraction locally
-  // On Day 15 this will be: fetch('http://localhost:8000/log-item', ...)
-  function saveItem() {
+  async function saveItem() {
     const text = document.getElementById('logText').value.trim();
     if (!text || text.length < 5) {
-      showToast('⚠️ Please describe where you kept the item!');
+      showToast('Please describe where you kept the item!');
       return;
     }
     const btn = document.getElementById('saveBtn');
     btn.innerHTML = '<span class="spinner"></span> Saving...';
     btn.disabled = true;
 
-    // Simulate API call delay
-    setTimeout(() => {
-      // Simple local extraction (will be replaced by Claude API)
-      const extracted = localExtract(text);
-      items.push({ ...extracted, raw_text: text, savedAt: Date.now() });
-      updateStats();
-      btn.innerHTML = 'Save Location';
-      btn.disabled = false;
-      document.getElementById('logText').value = '';
-      showToast(`✅ Saved! ${capitalize(extracted.item_name)} → ${extracted.location}`);
-    }, 800);
+    try {
+      const response = await fetch('http://localhost:8000/log-item', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: text, user_id: 'neha123' })
+      });
+      const data = await response.json();
+      if (response.ok) {
+        items.push({
+          item_name: data.item_name,
+          location: data.location,
+          room: data.room,
+          savedAt: Date.now()
+        });
+        updateStats();
+        document.getElementById('logText').value = '';
+        showToast('Saved! ' + capitalize(data.item_name) + ' → ' + data.location);
+      } else {
+        showToast('Error: ' + data.detail);
+      }
+    } catch (error) {
+      showToast('Cannot connect to server. Is it running?');
+    }
+
+    btn.innerHTML = 'Save Location';
+    btn.disabled = false;
   }
 
-  // ─── Simple local extraction (placeholder for Claude API) ───
-  function localExtract(text) {
-    const lower = text.toLowerCase();
-    const rooms = ['bedroom', 'kitchen', 'bathroom', 'living room', 'office', 'hall', 'garage', 'balcony'];
-    const room = rooms.find(r => lower.includes(r)) || 'unknown';
-    // Extract item name — simple heuristic
-    const itemMatch = lower.match(/(?:my|the)\s+([a-z\s]+?)(?:\s+(?:in|on|at|near|behind|under|inside))/);
-    const item_name = itemMatch ? itemMatch[1].trim() : 'item';
-    // Extract location
-    const locMatch = lower.match(/(?:in|on|at|near|behind|under|inside)\s+(?:the\s+)?(.+?)(?:\s+in\s+|\s+near\s+|$)/);
-    const location = locMatch ? locMatch[1].trim() : 'unknown location';
-    return { item_name, location, room };
-  }
-
-  // ─── Find item ───
-  // On Day 17 this will be: fetch('http://localhost:8000/find-item?query=...')
-  function findItem() {
+  async function findItem() {
     const query = document.getElementById('findInput').value.trim();
     if (!query) return;
     const btn = document.getElementById('searchBtn');
     btn.innerHTML = '<span class="spinner"></span>';
 
-    setTimeout(() => {
-      btn.innerHTML = '🔍';
+    try {
+      const response = await fetch(
+        'http://localhost:8000/find-item?query=' + encodeURIComponent(query) + '&user_id=neha123'
+      );
+      const data = await response.json();
       document.getElementById('findEmpty').style.display = 'none';
       const card = document.getElementById('answerCard');
       card.classList.add('show');
+      document.getElementById('answerText').textContent = data.answer;
+    } catch (error) {
+      showToast('Cannot connect to server. Is it running?');
+    }
 
-      if (items.length === 0) {
-        document.getElementById('answerText').textContent = "You haven't saved any items yet. Go to Log Item tab to start!";
-        return;
-      }
-
-      // Simple local search
-      const lower = query.toLowerCase();
-      const found = items.find(item =>
-        lower.includes(item.item_name.toLowerCase()) ||
-        item.item_name.toLowerCase().split(' ').some(w => lower.includes(w))
-      );
-
-      if (found) {
-        document.getElementById('answerText').textContent =
-          `You kept your ${found.item_name} at ${found.location} (${found.room}). Saved ${timeAgo(found.savedAt)}.`;
-      } else {
-        document.getElementById('answerText').textContent =
-          "I couldn't find that item in your saved locations. Try logging it first!";
-      }
-    }, 800);
+    btn.innerHTML = '🔍';
   }
 
-  // ─── Voice input ───
   let recognition;
   function toggleMic() {
     if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
-      showToast('⚠️ Voice not supported — try Chrome browser');
+      showToast('Voice not supported — try Chrome browser');
       return;
     }
     const btn = document.getElementById('micBtn');
@@ -459,7 +437,7 @@
         document.getElementById('logText').value = e.results[0][0].transcript;
         btn.classList.remove('recording');
         btn.textContent = '🎤';
-        showToast('🎤 Voice captured!');
+        showToast('Voice captured!');
       };
       recognition.onerror = () => {
         btn.classList.remove('recording');
@@ -475,13 +453,12 @@
     recognition.start();
   }
 
-  // Enter key on search
   document.getElementById('findInput').addEventListener('keydown', (e) => {
     if (e.key === 'Enter') findItem();
   });
 
-  // Init stats
   updateStats();
 </script>
+
 </body>
 </html>
