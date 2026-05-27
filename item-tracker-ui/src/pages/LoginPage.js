@@ -43,7 +43,7 @@ function LoginPage() {
           margin: '0 auto 16px',
           boxShadow: '0 8px 24px rgba(0,0,0,0.15)'
         }}>📍</div>
-        <h1 style={{ color: 'white', fontSize: '26px', fontWeight: '700', letterSpacing: '-0.3px' }}>ItemTracker</h1>
+        <h1 style={{ color: 'white', fontSize: '26px', fontWeight: '700', letterSpacing: '-0.3px' }}>Keeep</h1>
         <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: '14px', marginTop: '6px' }}>Your AI memory assistant</p>
       </div>
 
