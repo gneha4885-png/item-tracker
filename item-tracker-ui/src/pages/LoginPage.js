@@ -15,7 +15,6 @@ function LoginPage() {
   async function handleSubmit() {
     if (!email || !password) { setError('Please fill all fields'); return; }
     setLoading(true); setError('');
-
     try {
       const endpoint = isLogin ? '/login' : '/register';
       const response = await axios.post(API + endpoint, { email, password });
@@ -30,57 +29,72 @@ function LoginPage() {
   }
 
   return (
-    <div className="app-container" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+    <div style={{ minHeight: '100vh', background: '#f5f8f5', display: 'flex', flexDirection: 'column', maxWidth: '390px', margin: '0 auto' }}>
 
-      <div style={{ textAlign: 'center', marginBottom: '40px' }}>
+      {/* Green header */}
+      <div style={{
+        background: 'linear-gradient(135deg, #0f4d28, #1a6b3a, #2d9e5a)',
+        padding: '60px 24px 40px', textAlign: 'center'
+      }}>
         <div style={{
-          width: '70px', height: '70px',
-          background: 'linear-gradient(135deg, #00d4ff, #0084ff)',
-          borderRadius: '20px', display: 'flex',
-          alignItems: 'center', justifyContent: 'center',
-          fontSize: '32px', margin: '0 auto 16px',
-          boxShadow: '0 0 30px rgba(0,212,255,0.3)'
+          width: '68px', height: '68px', background: 'white',
+          borderRadius: '20px', display: 'flex', alignItems: 'center',
+          justifyContent: 'center', fontSize: '30px',
+          margin: '0 auto 16px',
+          boxShadow: '0 8px 24px rgba(0,0,0,0.15)'
         }}>📍</div>
-        <div className="page-title">ItemTracker</div>
-        <div className="page-subtitle">Your AI memory assistant</div>
+        <h1 style={{ color: 'white', fontSize: '26px', fontWeight: '700', letterSpacing: '-0.3px' }}>ItemTracker</h1>
+        <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: '14px', marginTop: '6px' }}>Your AI memory assistant</p>
       </div>
 
-      <div className="card neu">
-        <div className="card-label">{isLogin ? 'Login to your account' : 'Create new account'}</div>
+      {/* Form */}
+      <div style={{ flex: 1, padding: '24px 20px' }}>
+        <div style={{
+          background: 'white', borderRadius: '20px', padding: '24px',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.08)'
+        }}>
+          {/* Toggle */}
+          <div style={{ display: 'flex', background: '#f5f8f5', borderRadius: '12px', padding: '4px', marginBottom: '20px' }}>
+            {['Login', 'Register'].map((tab, i) => (
+              <button key={tab} onClick={() => { setIsLogin(i === 0); setError(''); }}
+                style={{
+                  flex: 1, padding: '10px',
+                  background: (isLogin ? i === 0 : i === 1) ? 'white' : 'transparent',
+                  border: 'none', borderRadius: '10px',
+                  color: (isLogin ? i === 0 : i === 1) ? '#1a6b3a' : '#999',
+                  fontSize: '14px', fontWeight: (isLogin ? i === 0 : i === 1) ? '600' : '400',
+                  cursor: 'pointer', transition: 'all 0.2s',
+                  fontFamily: 'Inter, sans-serif',
+                  boxShadow: (isLogin ? i === 0 : i === 1) ? '0 1px 6px rgba(0,0,0,0.08)' : 'none'
+                }}
+              >{tab}</button>
+            ))}
+          </div>
 
-        <input
-          className="input-field neu-inset"
-          type="email"
-          placeholder="Email address"
-          value={email}
-          onChange={e => setEmail(e.target.value)}
-          style={{ marginBottom: '12px', borderRadius: '14px', display: 'block' }}
-        />
+          <input className="input-light" type="email" placeholder="Email address"
+            value={email} onChange={e => setEmail(e.target.value)}
+            style={{ marginBottom: '12px' }} />
 
-        <input
-          className="input-field neu-inset"
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={e => setPassword(e.target.value)}
-          style={{ marginBottom: '16px', borderRadius: '14px', display: 'block' }}
-          onKeyDown={e => e.key === 'Enter' && handleSubmit()}
-        />
+          <input className="input-light" type="password" placeholder="Password"
+            value={password} onChange={e => setPassword(e.target.value)}
+            style={{ marginBottom: '20px' }}
+            onKeyDown={e => e.key === 'Enter' && handleSubmit()} />
 
-        {error && <p style={{ color: '#ff6b6b', fontSize: '13px', marginBottom: '12px' }}>{error}</p>}
+          {error && (
+            <div style={{
+              background: '#fff5f5', border: '1px solid #ffcdd2',
+              borderRadius: '10px', padding: '10px 14px',
+              color: '#e53935', fontSize: '13px', marginBottom: '16px'
+            }}>{error}</div>
+          )}
 
-        <button className="btn-primary" onClick={handleSubmit} disabled={loading}>
-          {loading ? 'Please wait...' : (isLogin ? 'Login' : 'Create Account')}
-        </button>
+          <button className="btn-green" onClick={handleSubmit} disabled={loading}>
+            {loading ? 'Please wait...' : (isLogin ? 'Login' : 'Create Account')}
+          </button>
+        </div>
 
-        <p style={{ textAlign: 'center', marginTop: '16px', fontSize: '14px', color: '#4a6fa5' }}>
-          {isLogin ? "Don't have an account? " : "Already have an account? "}
-          <span
-            onClick={() => { setIsLogin(!isLogin); setError(''); }}
-            style={{ color: '#00d4ff', cursor: 'pointer', fontWeight: '600' }}
-          >
-            {isLogin ? 'Register' : 'Login'}
-          </span>
+        <p style={{ textAlign: 'center', marginTop: '20px', fontSize: '13px', color: '#999' }}>
+          Powered by Claude AI 🤖
         </p>
       </div>
     </div>

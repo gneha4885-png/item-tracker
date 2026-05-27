@@ -6,16 +6,37 @@ import HistoryPage from './pages/HistoryPage';
 import BottomNav from './components/BottomNav';
 import './index.css';
 
-function App() {
+function PrivateRoute({ children }) {
   const token = localStorage.getItem('token');
+  if (!token) {
+    return <Navigate to="/" replace />;
+  }
+  return children;
+}
 
+function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={token ? <Navigate to="/log" /> : <LoginPage />} />
-        <Route path="/log" element={<><LogItemPage /><BottomNav /></>} />
-        <Route path="/find" element={<><FindItemPage /><BottomNav /></>} />
-        <Route path="/history" element={<><HistoryPage /><BottomNav /></>} />
+        <Route path="/" element={<LoginPage />} />
+        <Route path="/log" element={
+          <PrivateRoute>
+            <LogItemPage />
+            <BottomNav />
+          </PrivateRoute>
+        } />
+        <Route path="/find" element={
+          <PrivateRoute>
+            <FindItemPage />
+            <BottomNav />
+          </PrivateRoute>
+        } />
+        <Route path="/history" element={
+          <PrivateRoute>
+            <HistoryPage />
+            <BottomNav />
+          </PrivateRoute>
+        } />
       </Routes>
     </BrowserRouter>
   );
