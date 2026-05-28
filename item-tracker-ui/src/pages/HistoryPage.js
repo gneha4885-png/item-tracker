@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 
-const API = 'http://localhost:8000';
+const API = 'https://keeep-backend.onrender.com';
 
 const EMOJI = { key:'🗝️',keys:'🗝️',passport:'📘',glasses:'👓',phone:'📱',medicine:'💊',medicines:'💊',wallet:'👛',laptop:'💻',charger:'🔌',book:'📚',watch:'⌚',card:'💳',aadhaar:'💳' };
 

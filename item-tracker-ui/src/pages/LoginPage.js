@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
-const API = 'http://localhost:8000';
+const API = 'https://keeep-backend.onrender.com';
 
 function LoginPage() {
   const [email, setEmail] = useState('');
