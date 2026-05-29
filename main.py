@@ -1,7 +1,7 @@
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI, HTTPException, Header
 from pydantic import BaseModel, validator
-from database import save_item, get_all_items, find_item
+from database import save_item, get_all_items, find_item, delete_item
 from claude_service import extract_item_location, find_item_location
 from auth import register_user, login_user, verify_token
 from typing import Optional
@@ -152,3 +152,10 @@ def login(request: AuthRequest):
         }
     except Exception as e:
         raise HTTPException(status_code=401, detail=str(e))
+    
+@app.delete("/items/{item_id}")
+def delete_item_endpoint(item_id: str, user_id: str):
+    success = delete_item(item_id, user_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Item not found")
+    return {"message": "Item deleted successfully"}
