@@ -5,8 +5,8 @@ import { useSession, logout } from '../hooks/useSession';
 import BottomNav from '../components/BottomNav';
 import Sidebar from '../components/Sidebar';
 
-//const API = process.env.REACT_APP_API_URL || 'https://keeep-backend.onrender.com';
-const API = 'http://localhost:8000';
+const API = process.env.REACT_APP_API_URL || 'https://keeep-backend.onrender.com';
+//const API = 'http://localhost:8000';
 
 const C = {
   green:'#00c48c', greenDark:'#009a6e', greenBg:'#f0faf5',
@@ -20,7 +20,7 @@ const FILTERS = ['All', 'Today', 'Yesterday', 'This week'];
 
 function HistoryPage() {
   const navigate                = useNavigate();
-  const { email }               = useSession();
+  useSession();
   const [items, setItems]       = useState([]);
   const [loading, setLoading]   = useState(true);
   const [search, setSearch]     = useState('');
@@ -31,12 +31,15 @@ function HistoryPage() {
   const [saving, setSaving]     = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
-  useEffect(() => {
-    const h = () => setIsMobile(window.innerWidth < 768);
-    window.addEventListener('resize', h);
-    fetchItems();
-    return () => window.removeEventListener('resize', h);
-  }, []);
+ useEffect(() => {
+  fetchItems();
+}, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+useEffect(() => {
+  const h = () => setIsMobile(window.innerWidth < 768);
+  window.addEventListener('resize', h);
+  return () => window.removeEventListener('resize', h);
+}, []);
 
   async function fetchItems() {
   setLoading(true);
