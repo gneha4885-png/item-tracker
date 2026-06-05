@@ -1,9 +1,9 @@
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi import FastAPI, HTTPException, Header
+from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, validator
-from database import save_item, get_all_items, find_item, delete_item
+from database import save_item, get_all_items, find_item, delete_item, upload_photo
 from claude_service import extract_item_location, find_item_location
-from auth import register_user, login_user, verify_token
+from auth import register_user, login_user
 from typing import Optional
 
 app = FastAPI(
@@ -18,10 +18,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Request model with validation
+# ── Request Models ────────────────────────────────────────────
 class LogItemRequest(BaseModel):
     text: str
     user_id: str = "neha123"
+    photo_url: str = ""          # ← NEW: optional photo
 
     @validator('text')
     def text_must_not_be_empty(cls, v):
@@ -33,13 +34,27 @@ class LogItemRequest(BaseModel):
             raise ValueError('Text too long — please keep it under 500 characters')
         return v.strip()
 
-# Response model
+class AuthRequest(BaseModel):
+    email: str
+    password: str
+
+class UploadPhotoRequest(BaseModel):
+    photo_base64: str
+    user_id: str
+
+class LogItemRequest(BaseModel):
+    text: str
+    user_id: str = "neha123"
+    photo_url: str = ""    # ← is this line there?
+
+# ── Response Models ───────────────────────────────────────────
 class LogItemResponse(BaseModel):
     message: str
     item_name: str
     location: str
     room: str
 
+# ── Health ────────────────────────────────────────────────────
 @app.get("/health")
 def health_check():
     return {
@@ -48,6 +63,21 @@ def health_check():
         "version": "1.0.0"
     }
 
+# ── Upload Photo ──────────────────────────────────────────────
+# ── Upload Photo ──────────────────────────────────────────────
+@app.post("/upload-photo")
+def upload_photo_endpoint(request: UploadPhotoRequest):
+    try:
+        photo_url = upload_photo(request.photo_base64, request.user_id)
+        if not photo_url:
+            raise HTTPException(status_code=500, detail="Photo upload failed")
+        return {"photo_url": photo_url}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Photo upload error: {str(e)}")
+
+# ── Log Item ──────────────────────────────────────────────────
 @app.post("/log-item", response_model=LogItemResponse)
 def log_item(request: LogItemRequest):
     try:
@@ -61,14 +91,15 @@ def log_item(request: LogItemRequest):
                 detail="I couldn't understand what item or location you mentioned. Try something like 'I kept my keys in the kitchen drawer'"
             )
 
-        # Step 3: Save to Firestore
+        # Step 3: Save to Firestore with photo_url
         save_item(
-            user_id=request.user_id,
-            item_name=extracted["item_name"],
-            location=extracted["location"],
-            room=extracted["room"],
-            raw_text=request.text
-        )
+    user_id=request.user_id,
+    item_name=extracted["item_name"],
+    location=extracted["location"],
+    room=extracted["room"],
+    raw_text=request.text,
+    photo_url=request.photo_url,   # ← is this line there?
+)
 
         # Step 4: Return success response
         return LogItemResponse(
@@ -83,34 +114,28 @@ def log_item(request: LogItemRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Something went wrong: {str(e)}")
 
+# ── Find Item ─────────────────────────────────────────────────
 @app.get("/find-item")
 def find_item_endpoint(query: str, user_id: str = "neha123"):
-    # Validate query
     if not query or not query.strip():
         raise HTTPException(
             status_code=400,
             detail="Please ask a question like 'where are my keys?'"
         )
-
     try:
-        # Step 1: Get all items for this user
         items = find_item(user_id, query)
-
-        # Step 2: Ask Claude to find the best match
         answer = find_item_location(query, items)
-
-        # Step 3: Return the answer
         return {
             "query": query,
             "answer": answer,
             "total_items_searched": len(items)
         }
-
     except HTTPException:
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Something went wrong: {str(e)}")
 
+# ── My Items ──────────────────────────────────────────────────
 @app.get("/my-items")
 def my_items(user_id: str = "neha123"):
     try:
@@ -121,12 +146,8 @@ def my_items(user_id: str = "neha123"):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Something went wrong: {str(e)}")
-    
-# Auth models
-class AuthRequest(BaseModel):
-    email: str
-    password: str
 
+# ── Auth ──────────────────────────────────────────────────────
 @app.post("/register")
 def register(request: AuthRequest):
     try:
@@ -152,7 +173,8 @@ def login(request: AuthRequest):
         }
     except Exception as e:
         raise HTTPException(status_code=401, detail=str(e))
-    
+
+# ── Delete Item ───────────────────────────────────────────────
 @app.delete("/items/{item_id}")
 def delete_item_endpoint(item_id: str, user_id: str):
     success = delete_item(item_id, user_id)
