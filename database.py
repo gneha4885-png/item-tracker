@@ -6,6 +6,7 @@ import json
 import base64
 import uuid
 import firebase_admin.storage
+from datetime import datetime, timezone
 
 # Initialize Firebase
 if not firebase_admin._apps:
@@ -30,7 +31,8 @@ def save_item(user_id: str, item_name: str, location: str,
         "room": room,
         "raw_text": raw_text,
         "photo_url": photo_url,
-        "timestamp": datetime.now().isoformat()
+        
+        "timestamp": datetime.now(timezone.utc).isoformat()
     })
     return doc_ref
 
