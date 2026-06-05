@@ -6,7 +6,6 @@ import BottomNav from '../components/BottomNav';
 import Sidebar from '../components/Sidebar';
 
 const API = process.env.REACT_APP_API_URL || 'https://keeep-backend.onrender.com';
-//const API = 'http://localhost:8000';
 
 const C = {
   green:'#00c48c', greenDark:'#009a6e', greenBg:'#f0faf5',
@@ -31,50 +30,40 @@ function HistoryPage() {
   const [saving, setSaving]     = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
- useEffect(() => {
-  fetchItems();
-}, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    fetchItems();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-useEffect(() => {
-  const h = () => setIsMobile(window.innerWidth < 768);
-  window.addEventListener('resize', h);
-  return () => window.removeEventListener('resize', h);
-}, []);
+  useEffect(() => {
+    const h = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', h);
+    return () => window.removeEventListener('resize', h);
+  }, []);
 
   async function fetchItems() {
-  setLoading(true);
-  try {
-    const userId = localStorage.getItem('user_id');
-    const res = await axios.get(`${API}/my-items?user_id=${userId}`);
-    const rawItems = res.data.items || [];
-    console.log('RAW ITEMS FROM API:', rawItems[0]); // already there
-    console.log('FIRST ITEM ID:', rawItems[0]?.id);  // ← ADD THIS
-    setItems(rawItems);
-  } catch (err) {
-    if (err.response?.status === 401) logout(navigate);
+    setLoading(true);
+    try {
+      const userId = localStorage.getItem('user_id');
+      const res = await axios.get(`${API}/my-items?user_id=${userId}`);
+      const rawItems = res.data.items || [];
+      setItems(rawItems);
+    } catch (err) {
+      if (err.response?.status === 401) logout(navigate);
+    }
+    setLoading(false);
   }
-  setLoading(false);
-}
 
   async function handleDelete(itemId) {
-    console.log('handleDelete called with:', itemId);
-    if (!itemId) {
-      console.error('itemId is undefined!');
-      return;
-    }
+    if (!itemId) return;
     setSaving(true);
     try {
       const userId = localStorage.getItem('user_id');
-      console.log('Calling DELETE:', `${API}/items/${itemId}?user_id=${userId}`);
       await axios.delete(`${API}/items/${itemId}`, {
         params: { user_id: userId }
       });
-      console.log('Delete success!');
       setItems(prev => prev.filter(i => (i.id || i.doc_id) !== itemId));
       setDeleteId(null);
     } catch (err) {
-      console.error('Delete failed:', err.response?.status, err.response?.data);
-      // remove from UI anyway so user sees feedback
       setItems(prev => prev.filter(i => (i.id || i.doc_id) !== itemId));
       setDeleteId(null);
     }
@@ -123,6 +112,16 @@ useEffect(() => {
     return filtered;
   }
 
+  // ── ITEM THUMBNAIL ────────────────────────────────────────
+  const ItemThumb = ({ item, size = 36 }) => (
+    item.photo_url ? (
+      <img src={item.photo_url} alt={item.item_name}
+        style={{ width:`${size}px`, height:`${size}px`, borderRadius:'10px', objectFit:'cover', flexShrink:0 }} />
+    ) : (
+      <div style={{ width:`${size}px`, height:`${size}px`, borderRadius:'10px', background:C.greenLight, display:'flex', alignItems:'center', justifyContent:'center', fontSize:`${size * 0.5}px`, flexShrink:0 }}>📦</div>
+    )
+  );
+
   const displayItems = filterItems(items);
 
   return (
@@ -147,9 +146,7 @@ useEffect(() => {
               </button>
             </div>
 
-            {/* mobile content */}
             <div style={{ flex:1, padding:'16px', overflowY:'auto' }}>
-              {/* header */}
               <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'6px' }}>
                 <h1 style={{ fontSize:'20px', fontWeight:800, color:C.text }}>
                   History
@@ -162,14 +159,12 @@ useEffect(() => {
               </div>
               <p style={{ fontSize:'13px', color:C.textMid, marginBottom:'16px' }}>All your saved item locations</p>
 
-              {/* filters */}
               <div style={{ display:'flex', gap:'6px', marginBottom:'12px', flexWrap:'wrap' }}>
                 {FILTERS.map(f => (
                   <button key={f} onClick={() => setFilter(f)} style={{ padding:'6px 12px', borderRadius:'10px', fontSize:'12px', fontWeight:600, cursor:'pointer', border:'none', background: filter===f ? C.green : C.greenBg, color: filter===f ? '#fff' : C.textMid, fontFamily:'inherit' }}>{f}</button>
                 ))}
               </div>
 
-              {/* items */}
               {loading ? (
                 <div style={{ textAlign:'center', padding:'48px 0', color:C.textMid }}>⏳ Loading...</div>
               ) : displayItems.length === 0 ? (
@@ -184,11 +179,11 @@ useEffect(() => {
                     return (
                       <div key={itemId || item.timestamp} style={{ background:C.white, border:`1px solid ${C.greenBorder}`, borderRadius:'14px', padding:'14px' }}>
                         <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:'8px' }}>
-                          <div style={{ width:'34px', height:'34px', borderRadius:'9px', background:C.greenLight, display:'flex', alignItems:'center', justifyContent:'center', fontSize:'16px' }}>📦</div>
+                          <ItemThumb item={item} size={34} />
                           <div style={{ display:'flex', gap:'6px' }}>
                             <button onClick={() => { setEditItem(item); setEditText(item.item_name || item.text || ''); }}
                               style={{ width:'28px', height:'28px', borderRadius:'7px', background:'#f0eefe', border:'none', cursor:'pointer', fontSize:'13px', display:'flex', alignItems:'center', justifyContent:'center' }}>✏️</button>
-                            <button onClick={() => { console.log('Delete clicked, itemId:', itemId); setDeleteId(itemId); }}
+                            <button onClick={() => setDeleteId(itemId)}
                               style={{ width:'28px', height:'28px', borderRadius:'7px', background:'#fff0f0', border:'none', cursor:'pointer', fontSize:'13px', display:'flex', alignItems:'center', justifyContent:'center' }}>🗑️</button>
                           </div>
                         </div>
@@ -204,11 +199,9 @@ useEffect(() => {
             <BottomNav active="history" />
           </>
         ) : (
-          /* web layout */
           <div style={{ display:'flex', flex:1 }}>
             <Sidebar active="history" itemCount={items.length} />
 
-            {/* web main — all inline */}
             <div style={{ flex:1, padding:'28px 32px', overflowY:'auto' }}>
               <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'6px' }}>
                 <h1 style={{ fontSize:'24px', fontWeight:800, color:C.text }}>
@@ -222,22 +215,17 @@ useEffect(() => {
               </div>
               <p style={{ fontSize:'13px', color:C.textMid, marginBottom:'20px' }}>All your saved item locations</p>
 
-              {/* toolbar */}
               <div style={{ display:'flex', alignItems:'center', gap:'8px', marginBottom:'16px', flexWrap:'wrap' }}>
                 <div style={{ display:'flex', gap:'6px', flex:1, flexWrap:'wrap' }}>
                   {FILTERS.map(f => (
                     <button key={f} onClick={() => setFilter(f)} style={{ padding:'7px 14px', borderRadius:'10px', fontSize:'12px', fontWeight:600, cursor:'pointer', border:'none', background: filter===f ? C.green : C.greenBg, color: filter===f ? '#fff' : C.textMid, fontFamily:'inherit' }}>{f}</button>
                   ))}
                 </div>
-                <input
-                  value={search}
-                  onChange={e => setSearch(e.target.value)}
+                <input value={search} onChange={e => setSearch(e.target.value)}
                   placeholder="Search items..."
-                  style={{ padding:'8px 14px', background:C.white, border:`1px solid ${C.greenBorder}`, borderRadius:'10px', fontSize:'12px', outline:'none', width:'180px', fontFamily:'inherit', cursor:'text' }}
-                />
+                  style={{ padding:'8px 14px', background:C.white, border:`1px solid ${C.greenBorder}`, borderRadius:'10px', fontSize:'12px', outline:'none', width:'180px', fontFamily:'inherit', cursor:'text' }} />
               </div>
 
-              {/* items grid */}
               {loading ? (
                 <div style={{ textAlign:'center', padding:'48px 0', color:C.textMid, fontSize:'14px' }}>⏳ Loading your items...</div>
               ) : displayItems.length === 0 ? (
@@ -251,13 +239,13 @@ useEffect(() => {
                   {displayItems.map(item => {
                     const itemId = item.id || item.doc_id;
                     return (
-                      <div key={itemId || item.timestamp} style={{ background:C.white, border:`1px solid ${C.greenBorder}`, borderRadius:'14px', padding:'16px', transition:'border-color 0.2s' }}>
+                      <div key={itemId || item.timestamp} style={{ background:C.white, border:`1px solid ${C.greenBorder}`, borderRadius:'14px', padding:'16px' }}>
                         <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:'8px' }}>
-                          <div style={{ width:'36px', height:'36px', borderRadius:'10px', background:C.greenLight, display:'flex', alignItems:'center', justifyContent:'center', fontSize:'18px', flexShrink:0 }}>📦</div>
+                          <ItemThumb item={item} size={36} />
                           <div style={{ display:'flex', gap:'6px' }}>
                             <button onClick={() => { setEditItem(item); setEditText(item.item_name || item.text || ''); }}
                               style={{ width:'30px', height:'30px', borderRadius:'8px', background:'#f0eefe', border:'none', cursor:'pointer', fontSize:'14px', display:'flex', alignItems:'center', justifyContent:'center' }} title="Edit">✏️</button>
-                            <button onClick={() => { console.log('Delete clicked, itemId:', itemId); setDeleteId(itemId); }}
+                            <button onClick={() => setDeleteId(itemId)}
                               style={{ width:'30px', height:'30px', borderRadius:'8px', background:'#fff0f0', border:'none', cursor:'pointer', fontSize:'14px', display:'flex', alignItems:'center', justifyContent:'center' }} title="Delete">🗑️</button>
                           </div>
                         </div>
