@@ -5,6 +5,7 @@ from database import save_item, get_all_items, find_item, delete_item, upload_ph
 from claude_service import extract_item_location, find_item_location
 from auth import register_user, login_user
 from typing import Optional
+from database import save_item, get_all_items, find_item, delete_item, upload_photo, update_item
 
 app = FastAPI(
     title="Item Tracker API",
@@ -181,3 +182,24 @@ def delete_item_endpoint(item_id: str, user_id: str):
     if not success:
         raise HTTPException(status_code=404, detail="Item not found")
     return {"message": "Item deleted successfully"}
+
+
+# ── Update Item ───────────────────────────────────────────
+class UpdateItemRequest(BaseModel):
+    user_id: str
+    text: str
+
+@app.patch("/items/{item_id}")
+def update_item_endpoint(item_id: str, request: UpdateItemRequest):
+    try:
+        success = update_item(item_id, request.user_id, {
+            'item_name': request.text,
+            'raw_text': request.text
+        })
+        if not success:
+            raise HTTPException(status_code=404, detail="Item not found")
+        return {"message": "Item updated successfully!"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

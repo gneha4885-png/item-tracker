@@ -1,6 +1,5 @@
 import firebase_admin
 from firebase_admin import credentials, firestore
-from datetime import datetime
 import os
 import json
 import base64
@@ -31,7 +30,6 @@ def save_item(user_id: str, item_name: str, location: str,
         "room": room,
         "raw_text": raw_text,
         "photo_url": photo_url,
-        
         "timestamp": datetime.now(timezone.utc).isoformat()
     })
     return doc_ref
@@ -97,3 +95,15 @@ def upload_photo(photo_base64: str, user_id: str) -> str:
     except Exception as e:
         print(f"Photo upload error: {e}")
         return ''
+    
+def update_item(item_id: str, user_id: str, updates: dict):
+    try:
+        doc_ref = db.collection('items').document(item_id)
+        doc = doc_ref.get()
+        if doc.exists and doc.to_dict().get('user_id') == user_id:
+            doc_ref.update(updates)
+            return True
+        return False
+    except Exception as e:
+        print(f"Update error: {e}")
+        return False
