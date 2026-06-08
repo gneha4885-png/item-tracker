@@ -22,7 +22,8 @@ if not firebase_admin._apps:
 db = firestore.client()
 
 def save_item(user_id: str, item_name: str, location: str, 
-              room: str, raw_text: str, photo_url: str = ''):
+              room: str, raw_text: str, photo_url: str = '', 
+              reminder_time: str = ''):
     doc_ref = db.collection("items").add({
         "user_id": user_id,
         "item_name": item_name,
@@ -30,6 +31,8 @@ def save_item(user_id: str, item_name: str, location: str,
         "room": room,
         "raw_text": raw_text,
         "photo_url": photo_url,
+        "reminder_time": reminder_time,
+        "reminder_sent": False,
         "timestamp": datetime.now(timezone.utc).isoformat()
     })
     return doc_ref

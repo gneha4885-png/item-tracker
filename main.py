@@ -23,7 +23,8 @@ app.add_middleware(
 class LogItemRequest(BaseModel):
     text: str
     user_id: str = "neha123"
-    photo_url: str = ""          # ← NEW: optional photo
+    photo_url: str = ""
+    reminder_time: str = ""   # ← ADD THIS
 
     @validator('text')
     def text_must_not_be_empty(cls, v):
@@ -99,7 +100,8 @@ def log_item(request: LogItemRequest):
     location=extracted["location"],
     room=extracted["room"],
     raw_text=request.text,
-    photo_url=request.photo_url,   # ← is this line there?
+    photo_url=request.photo_url,
+    reminder_time=request.reminder_time,  # ← ADD THIS
 )
 
         # Step 4: Return success response
