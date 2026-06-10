@@ -24,7 +24,7 @@ class LogItemRequest(BaseModel):
     text: str
     user_id: str = "neha123"
     photo_url: str = ""
-    reminder_time: str = ""   # ← ADD THIS
+    reminder_time: str = "" 
 
     @validator('text')
     def text_must_not_be_empty(cls, v):
