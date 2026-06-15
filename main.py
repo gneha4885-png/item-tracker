@@ -1,11 +1,9 @@
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, validator
-from database import save_item, get_all_items, find_item, delete_item, upload_photo
+from database import save_item, get_all_items, find_item, delete_item, upload_photo, update_item
 from claude_service import extract_item_location, find_item_location
 from auth import register_user, login_user
-from typing import Optional
-from database import save_item, get_all_items, find_item, delete_item, upload_photo, update_item
 
 app = FastAPI(
     title="Item Tracker API",
@@ -24,7 +22,7 @@ class LogItemRequest(BaseModel):
     text: str
     user_id: str = "neha123"
     photo_url: str = ""
-    reminder_time: str = "" 
+    reminder_time: str = ""
 
     @validator('text')
     def text_must_not_be_empty(cls, v):
@@ -44,10 +42,10 @@ class UploadPhotoRequest(BaseModel):
     photo_base64: str
     user_id: str
 
-class LogItemRequest(BaseModel):
+class UpdateItemRequest(BaseModel):
+    user_id: str
     text: str
-    user_id: str = "neha123"
-    photo_url: str = ""    # ← is this line there?
+    reminder_time: str = ""
 
 # ── Response Models ───────────────────────────────────────────
 class LogItemResponse(BaseModel):
@@ -55,6 +53,7 @@ class LogItemResponse(BaseModel):
     item_name: str
     location: str
     room: str
+    reminder_time: str = ""
 
 # ── Health ────────────────────────────────────────────────────
 @app.get("/health")
@@ -65,7 +64,6 @@ def health_check():
         "version": "1.0.0"
     }
 
-# ── Upload Photo ──────────────────────────────────────────────
 # ── Upload Photo ──────────────────────────────────────────────
 @app.post("/upload-photo")
 def upload_photo_endpoint(request: UploadPhotoRequest):
@@ -83,34 +81,31 @@ def upload_photo_endpoint(request: UploadPhotoRequest):
 @app.post("/log-item", response_model=LogItemResponse)
 def log_item(request: LogItemRequest):
     try:
-        # Step 1: Send text to Claude for extraction
         extracted = extract_item_location(request.text)
 
-        # Step 2: Check if extraction was meaningful
         if extracted["item_name"] == "unknown" and extracted["location"] == "unknown":
             raise HTTPException(
                 status_code=400,
                 detail="I couldn't understand what item or location you mentioned. Try something like 'I kept my keys in the kitchen drawer'"
             )
 
-        # Step 3: Save to Firestore with photo_url
         save_item(
-    user_id=request.user_id,
-    item_name=extracted["item_name"],
-    location=extracted["location"],
-    room=extracted["room"],
-    raw_text=request.text,
-    photo_url=request.photo_url,
-    reminder_time=request.reminder_time,  # ← ADD THIS
-)
+            user_id=request.user_id,
+            item_name=extracted["item_name"],
+            location=extracted["location"],
+            room=extracted["room"],
+            raw_text=request.text,
+            photo_url=request.photo_url,
+            reminder_time=request.reminder_time,
+        )
 
-        # Step 4: Return success response
         return LogItemResponse(
             message=f"Got it! I saved your {extracted['item_name']} 📍",
             item_name=extracted["item_name"],
             location=extracted["location"],
-            room=extracted["room"]
-        )
+            room=extracted["room"],
+            reminder_time=request.reminder_time  # ← add this
+)
 
     except HTTPException:
         raise
@@ -185,19 +180,18 @@ def delete_item_endpoint(item_id: str, user_id: str):
         raise HTTPException(status_code=404, detail="Item not found")
     return {"message": "Item deleted successfully"}
 
-
-# ── Update Item ───────────────────────────────────────────
-class UpdateItemRequest(BaseModel):
-    user_id: str
-    text: str
-
+# ── Update Item ───────────────────────────────────────────────
 @app.patch("/items/{item_id}")
+# ✅ Fixed — except added
 def update_item_endpoint(item_id: str, request: UpdateItemRequest):
     try:
-        success = update_item(item_id, request.user_id, {
+        updates = {
             'item_name': request.text,
             'raw_text': request.text
-        })
+        }
+        if request.reminder_time:
+            updates['reminder_time'] = request.reminder_time
+        success = update_item(item_id, request.user_id, updates)
         if not success:
             raise HTTPException(status_code=404, detail="Item not found")
         return {"message": "Item updated successfully!"}
