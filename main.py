@@ -23,6 +23,9 @@ class LogItemRequest(BaseModel):
     user_id: str = "neha123"
     photo_url: str = ""
     reminder_time: str = ""
+    is_medicine: bool = False
+    reminder_times: list[str] = []   # e.g. ["08:00", "14:00", "21:00"]
+    repeat_type: str = ""             # "daily" or "" for one-time
 
     @validator('text')
     def text_must_not_be_empty(cls, v):
@@ -46,6 +49,9 @@ class UpdateItemRequest(BaseModel):
     user_id: str
     text: str
     reminder_time: str = ""
+    is_medicine: bool = False
+    reminder_times: list[str] = []
+    repeat_type: str = ""
 
 # ── Response Models ───────────────────────────────────────────
 class LogItemResponse(BaseModel):
@@ -97,6 +103,9 @@ def log_item(request: LogItemRequest):
             raw_text=request.text,
             photo_url=request.photo_url,
             reminder_time=request.reminder_time,
+            is_medicine=request.is_medicine,
+            reminder_times=request.reminder_times,
+            repeat_type=request.repeat_type,
         )
 
         return LogItemResponse(
@@ -182,7 +191,6 @@ def delete_item_endpoint(item_id: str, user_id: str):
 
 # ── Update Item ───────────────────────────────────────────────
 @app.patch("/items/{item_id}")
-# ✅ Fixed — except added
 def update_item_endpoint(item_id: str, request: UpdateItemRequest):
     try:
         updates = {
@@ -191,6 +199,10 @@ def update_item_endpoint(item_id: str, request: UpdateItemRequest):
         }
         if request.reminder_time:
             updates['reminder_time'] = request.reminder_time
+        if request.is_medicine:
+            updates['is_medicine'] = request.is_medicine
+            updates['reminder_times'] = request.reminder_times
+            updates['repeat_type'] = request.repeat_type
         success = update_item(item_id, request.user_id, updates)
         if not success:
             raise HTTPException(status_code=404, detail="Item not found")

@@ -21,9 +21,15 @@ if not firebase_admin._apps:
 
 db = firestore.client()
 
+# ── UPDATED save_item function ──────────────────────────────────
 def save_item(user_id: str, item_name: str, location: str, 
               room: str, raw_text: str, photo_url: str = '', 
-              reminder_time: str = ''):
+              reminder_time: str = '', is_medicine: bool = False,
+              reminder_times: list = None, repeat_type: str = ''):
+    
+    if reminder_times is None:
+        reminder_times = []
+    
     doc_ref = db.collection("items").add({
         "user_id": user_id,
         "item_name": item_name,
@@ -31,12 +37,14 @@ def save_item(user_id: str, item_name: str, location: str,
         "room": room,
         "raw_text": raw_text,
         "photo_url": photo_url,
-        "reminder_time": reminder_time,
+        "reminder_time": reminder_time,        # one-time reminder (existing)
         "reminder_sent": False,
+        "is_medicine": is_medicine,             # NEW
+        "reminder_times": reminder_times,       # NEW — ["08:00","14:00","21:00"]
+        "repeat_type": repeat_type,             # NEW — "daily" or ""
         "timestamp": datetime.now(timezone.utc).isoformat()
     })
     return doc_ref
-
 def get_all_items(user_id: str):
     items = db.collection("items")\
               .where("user_id", "==", user_id)\
