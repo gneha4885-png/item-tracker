@@ -6,6 +6,7 @@ import base64
 import uuid
 import firebase_admin.storage
 from datetime import datetime, timezone
+from firebase_admin import messaging as fcm_messaging
 
 # Initialize Firebase
 if not firebase_admin._apps:
@@ -20,6 +21,30 @@ if not firebase_admin._apps:
 })
 
 db = firestore.client()
+
+# ── Push notification sender ────────────────────────────────────
+def send_push_notification(fcm_token: str, title: str, body: str):
+    """Send a push notification via FCM to a specific device token."""
+    try:
+        message = fcm_messaging.Message(
+            notification=fcm_messaging.Notification(
+                title=title,
+                body=body,
+            ),
+            token=fcm_token,
+            webpush=fcm_messaging.WebpushConfig(
+                notification=fcm_messaging.WebpushNotification(
+                    icon="/logo192.png",
+                ),
+                fcm_options=fcm_messaging.WebpushFCMOptions(link="/log"),
+            ),
+        )
+        response = fcm_messaging.send(message)
+        return response
+    except Exception as e:
+        print(f"Push notification error: {e}")
+        return None
+
 
 # ── UPDATED save_item function ──────────────────────────────────
 def save_item(user_id: str, item_name: str, location: str, 
