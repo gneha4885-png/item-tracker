@@ -1,11 +1,12 @@
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, validator
-from database import save_item, get_all_items, find_item, delete_item, upload_photo, update_item, db, get_items_by_user, send_push_notification
+from database import save_item, get_all_items, find_item, delete_item, upload_photo,db, update_item, send_push_notification
 from claude_service import extract_item_location, find_item_location
 from auth import register_user, login_user
 from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime, timezone
+
 
 
 
